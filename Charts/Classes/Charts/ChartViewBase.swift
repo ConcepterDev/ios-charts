@@ -73,6 +73,9 @@ public class ChartViewBase: UIView, ChartDataProvider, ChartAnimatorDelegate
     /// description text that appears in the bottom right corner of the chart
     public var descriptionText = "Description"
     
+    /// flag that indicates if the chart has been fed with data yet
+    internal var _dataNotSet = true
+    
     /// if true, units are drawn next to the values in the chart
     internal var _drawUnitInChart = false
     
@@ -99,7 +102,7 @@ public class ChartViewBase: UIView, ChartDataProvider, ChartAnimatorDelegate
     /// object responsible for rendering the data
     public var renderer: ChartDataRendererBase?
     
-    public var highlighter: ChartHighlighter?
+    internal var _highlighter: ChartHighlighter?
     
     /// object that manages the bounds and drawing constraints of the chart
     internal var _viewPortHandler: ChartViewPortHandler!
@@ -194,6 +197,7 @@ public class ChartViewBase: UIView, ChartDataProvider, ChartAnimatorDelegate
                 return
             }
             
+            _dataNotSet = false
             _offsetsCalculated = false
             _data = newValue
             
@@ -208,6 +212,7 @@ public class ChartViewBase: UIView, ChartDataProvider, ChartAnimatorDelegate
     public func clear()
     {
         _data = nil
+        _dataNotSet = true
         _indicesToHighlight.removeAll()
         setNeedsDisplay()
     }
@@ -292,8 +297,8 @@ public class ChartViewBase: UIView, ChartDataProvider, ChartAnimatorDelegate
         
         let frame = self.bounds
 
-        if _data === nil
-        {
+        if (_dataNotSet || _data === nil || _data.yValCount == 0)
+        { // check if there is data
             
             CGContextSaveGState(context)
             
@@ -755,6 +760,12 @@ public class ChartViewBase: UIView, ChartDataProvider, ChartAnimatorDelegate
         }
         
         return vals
+    }
+    
+    /// - returns: the percentage the given value has of the total y-value sum
+    public func percentOfTotal(val: Double) -> Double
+    {
+        return val / _data.yValueSum * 100.0
     }
     
     /// - returns: the ViewPortHandler of the chart that is responsible for the

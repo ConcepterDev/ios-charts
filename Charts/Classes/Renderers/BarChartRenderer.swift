@@ -10,7 +10,6 @@
 //
 //  https://github.com/danielgindi/ios-charts
 //
-
 import Foundation
 import CoreGraphics
 import UIKit
@@ -121,10 +120,35 @@ public class BarChartRenderer: ChartDataRendererBase
                     CGContextSetFillColorWithColor(context, dataSet.barShadowColor.CGColor)
                     CGContextFillRect(context, barShadow)
                 }
+
+                let baseSpace:CGColorSpaceRef = CGColorSpaceCreateDeviceRGB()!;
+                let gradient:CGGradientRef = CGGradientCreateWithColors(baseSpace, dataSet.gradientColors, nil)!
+                CGContextSetLineWidth(context, 0.0);
+
                 
-                // Set the color for the currently drawn value. If the index is out of bounds, reuse colors.
-                CGContextSetFillColorWithColor(context, dataSet.colorAt(j).CGColor)
-                CGContextFillRect(context, barRect)
+                let context:CGContextRef = UIGraphicsGetCurrentContext()!;
+                
+                CGContextSaveGState(context);
+                CGContextAddPath(context, UIBezierPath(
+                    roundedRect: barRect,
+                    byRoundingCorners: UIRectCorner.TopLeft.union(.TopRight),
+                    cornerRadii: CGSizeMake(barRect.size.width , barRect.size.width )).CGPath)
+                CGContextClip(context);
+                
+                let startPoint:CGPoint = CGPointMake(CGRectGetMidX(barRect), CGRectGetMinY(barRect));
+                let endPoint:CGPoint = CGPointMake(CGRectGetMidX(barRect), CGRectGetMaxY(barRect));
+                
+                CGContextDrawLinearGradient(context, gradient, startPoint, endPoint, .DrawsBeforeStartLocation);
+                
+                CGContextRestoreGState(context);
+                
+                CGContextAddPath(context, UIBezierPath(
+                                        roundedRect: barRect,
+                                        byRoundingCorners: UIRectCorner.TopLeft.union(.TopRight),
+                                        cornerRadii: CGSizeMake(barRect.size.width , barRect.size.width )).CGPath)
+                
+                CGContextDrawPath(context, .Stroke);
+
             }
             else
             {
@@ -223,9 +247,27 @@ public class BarChartRenderer: ChartDataRendererBase
                         break
                     }
                     
-                    // Set the color for the currently drawn value. If the index is out of bounds, reuse colors.
-                    CGContextSetFillColorWithColor(context, dataSet.colorAt(k).CGColor)
-                    CGContextFillRect(context, barRect)
+                    
+                    let baseSpace:CGColorSpaceRef  = CGColorSpaceCreateDeviceRGB()!
+                    let gradient:CGGradientRef = CGGradientCreateWithColors(baseSpace, dataSet.gradientColors, nil)!
+                    //CGGradientCreateWithColorComponents(baseSpace, colors, nil, 2)!
+                    
+                    let context: CGContextRef = UIGraphicsGetCurrentContext()!
+                    
+                    CGContextSaveGState(context);
+                    CGContextAddRect(context, barRect)
+                    //                CGContextAddEllipseInRect(context, barRect);
+                    CGContextClip(context);
+                    
+                    let startPoint: CGPoint = CGPointMake(CGRectGetMidX(barRect), CGRectGetMinY(barRect))
+                    let endPoint: CGPoint = CGPointMake(CGRectGetMidX(barRect), CGRectGetMaxY(barRect))
+                    
+                    CGContextDrawLinearGradient(context, gradient, startPoint, endPoint, .DrawsBeforeStartLocation);
+                    
+                    CGContextRestoreGState(context);
+                    
+                    //CGContextAddEllipseInRect(context, barRect);
+                    CGContextDrawPath(context, .Stroke);
                 }
             }
         }
@@ -261,7 +303,7 @@ public class BarChartRenderer: ChartDataRendererBase
             var dataSets = barData.dataSets
             
             let drawValueAboveBar = dataProvider.isDrawValueAboveBarEnabled
-
+            
             var posOffset: CGFloat
             var negOffset: CGFloat
             
@@ -316,7 +358,7 @@ public class BarChartRenderer: ChartDataRendererBase
                         }
                         
                         let val = entries[j].value
-                    
+                        
                         drawValue(context: context,
                             value: formatter!.stringFromNumber(val)!,
                             xPos: valuePoints[j].x,
@@ -474,7 +516,7 @@ public class BarChartRenderer: ChartDataRendererBase
                 
                 let groupspace = barData.groupSpace
                 let isStack = h.stackIndex < 0 ? false : true
-
+                
                 // calculate the correct x-position
                 let x = CGFloat(index * setCount + dataSetIndex) + groupspace / 2.0 + groupspace * CGFloat(index)
                 
@@ -491,7 +533,7 @@ public class BarChartRenderer: ChartDataRendererBase
                     y1 = e.value
                     y2 = 0.0
                 }
-
+                
                 prepareBarHighlight(x: x, y1: y1, y2: y2, barspacehalf: barspaceHalf, trans: trans, rect: &barRect)
                 
                 CGContextFillRect(context, barRect)
@@ -550,3 +592,4 @@ public class BarChartRenderer: ChartDataRendererBase
         return CGFloat(barData.yValCount) < CGFloat(dataProvider.maxVisibleValueCount) * viewPortHandler.scaleX
     }
 }
+

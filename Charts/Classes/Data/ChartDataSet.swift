@@ -18,6 +18,8 @@ import UIKit
 public class ChartDataSet: NSObject
 {
     public var colors = [UIColor]()
+    public var gradientColors = [AnyObject!]()
+    public var barWidth : CGFloat = 0
     internal var _yVals: [ChartDataEntry]!
     internal var _yMax = Double(0.0)
     internal var _yMin = Double(0.0)
@@ -143,7 +145,7 @@ public class ChartDataSet: NSObject
         
         for var i = 0; i < _yVals.count; i++
         {
-            _yValueSum += _yVals[i].value
+            _yValueSum += fabs(_yVals[i].value)
         }
     }
     
@@ -153,7 +155,7 @@ public class ChartDataSet: NSObject
         return yValueSum / Double(valueCount)
     }
     
-    public var entryCount: Int { return _yVals?.count ?? 0 }
+    public var entryCount: Int { return _yVals!.count; }
     
     public func yValForXIndex(x: Int) -> Double
     {
@@ -484,6 +486,22 @@ public class ChartDataSet: NSObject
     {
         colors.removeAll(keepCapacity: false)
         colors.append(color)
+    }
+    
+    public func resetGradientColor()
+    {
+        gradientColors.removeAll(keepCapacity: false)
+    }
+    
+    public func addGradientColor(color: CGColorRef)
+    {
+        gradientColors.append(color)
+    }
+    
+    public func setGradientColor(color: [AnyObject!])
+    {
+        gradientColors.removeAll(keepCapacity: false)
+        gradientColors = color
     }
     
     public func colorAt(var index: Int) -> UIColor

@@ -106,7 +106,7 @@ public class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChar
         
         _xAxisRenderer = ChartXAxisRenderer(viewPortHandler: _viewPortHandler, xAxis: _xAxis, transformer: _leftAxisTransformer)
         
-        self.highlighter = ChartHighlighter(chart: self)
+        _highlighter = ChartHighlighter(chart: self)
         
         _tapGestureRecognizer = UITapGestureRecognizer(target: self, action: Selector("tapGestureRecognized:"))
         _doubleTapGestureRecognizer = UITapGestureRecognizer(target: self, action: Selector("doubleTapGestureRecognized:"))
@@ -134,7 +134,7 @@ public class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChar
     {
         super.drawRect(rect)
         
-        if _data === nil
+        if (_dataNotSet)
         {
             return
         }
@@ -261,7 +261,7 @@ public class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChar
     
     public override func notifyDataSetChanged()
     {
-        if _data === nil
+        if (_dataNotSet)
         {
             return
         }
@@ -614,7 +614,7 @@ public class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChar
     
     @objc private func tapGestureRecognized(recognizer: UITapGestureRecognizer)
     {
-        if _data === nil
+        if (_dataNotSet)
         {
             return
         }
@@ -640,14 +640,14 @@ public class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChar
     
     @objc private func doubleTapGestureRecognized(recognizer: UITapGestureRecognizer)
     {
-        if _data === nil
+        if (_dataNotSet)
         {
             return
         }
         
         if (recognizer.state == UIGestureRecognizerState.Ended)
         {
-            if _data !== nil && _doubleTapToZoomEnabled
+            if (!_dataNotSet && _doubleTapToZoomEnabled)
             {
                 var location = recognizer.locationInView(self)
                 location.x = location.x - _viewPortHandler.offsetLeft
@@ -673,7 +673,7 @@ public class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChar
         {
             stopDeceleration()
             
-            if _data !== nil && (_pinchZoomEnabled || _scaleXEnabled || _scaleYEnabled)
+            if (!_dataNotSet && (_pinchZoomEnabled || _scaleXEnabled || _scaleYEnabled))
             {
                 _isScaling = true
                 
@@ -763,7 +763,7 @@ public class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChar
         {
             stopDeceleration()
             
-            if _data === nil
+            if _dataNotSet
             { // If we have no data, we have nothing to pan and no data to highlight
                 return;
             }
@@ -943,7 +943,7 @@ public class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChar
         
         if (gestureRecognizer == _panGestureRecognizer)
         {
-            if _data === nil || !_dragEnabled ||
+            if _dataNotSet || !_dragEnabled ||
                 (self.hasNoDragOffset && self.isFullyZoomedOut && !self.isHighlightPerDragEnabled)
             {
                 return false
@@ -954,7 +954,7 @@ public class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChar
             #if !os(tvOS)
                 if (gestureRecognizer == _pinchGestureRecognizer)
                 {
-                    if _data === nil || (!_pinchZoomEnabled && !_scaleXEnabled && !_scaleYEnabled)
+                    if (_dataNotSet || (!_pinchZoomEnabled && !_scaleXEnabled && !_scaleYEnabled))
                     {
                         return false
                     }
@@ -1095,7 +1095,7 @@ public class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChar
     }
     
     /// Sets the size of the area (range on the x-axis) that should be minimum visible at once (no further zooming in allowed).
-    /// If this is e.g. set to 10, no less than 10 values on the x-axis can be viewed at once without scrolling.
+    /// If this is e.g. set to 10, no more than 10 values on the x-axis can be viewed at once without scrolling.
     public func setVisibleXRangeMinimum(minXRange: CGFloat)
     {
         let xScale = _deltaX / minXRange
@@ -1387,13 +1387,13 @@ public class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChar
     /// - returns: the Highlight object (contains x-index and DataSet index) of the selected value at the given touch point inside the Line-, Scatter-, or CandleStick-Chart.
     public func getHighlightByTouchPoint(pt: CGPoint) -> ChartHighlight?
     {
-        if _data === nil
+        if (_dataNotSet || _data === nil)
         {
             print("Can't select by touch. No data set.", terminator: "\n")
             return nil
         }
 
-        return self.highlighter?.getHighlight(x: Double(pt.x), y: Double(pt.y))
+        return _highlighter?.getHighlight(x: Double(pt.x), y: Double(pt.y))
     }
 
     /// - returns: the x and y values in the chart at the given touch point

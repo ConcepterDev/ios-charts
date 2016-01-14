@@ -138,7 +138,7 @@ public class RadarChartView: PieRadarChartViewBase
     
     public override func notifyDataSetChanged()
     {
-        if _data === nil
+        if (_dataNotSet)
         {
             return
         }
@@ -164,7 +164,7 @@ public class RadarChartView: PieRadarChartViewBase
     {
         super.drawRect(rect)
 
-        if _data === nil
+        if (_dataNotSet)
         {
             return
         }

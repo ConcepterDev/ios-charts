@@ -74,7 +74,7 @@ public class PieRadarChartViewBase: ChartViewBase
     
     public override func notifyDataSetChanged()
     {
-        if _data === nil
+        if (_dataNotSet)
         {
             return
         }

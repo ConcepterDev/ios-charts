@@ -15,9 +15,9 @@
 import Foundation
 import CoreGraphics
 
-public class HorizontalBarChartHighlighter: BarChartHighlighter
+internal class HorizontalBarChartHighlighter: BarChartHighlighter
 {
-    public override func getHighlight(x x: Double, y: Double) -> ChartHighlight?
+    internal override func getHighlight(x x: Double, y: Double) -> ChartHighlight?
     {
         let h = super.getHighlight(x: x, y: y)
         
@@ -27,7 +27,7 @@ public class HorizontalBarChartHighlighter: BarChartHighlighter
         }
         else
         {
-            if let set = self.chart?.data?.getDataSetByIndex(h!.dataSetIndex) as? BarChartDataSet
+            if let set = _chart?.data?.getDataSetByIndex(h!.dataSetIndex) as? BarChartDataSet
             {
                 if set.isStacked
                 {
@@ -36,7 +36,7 @@ public class HorizontalBarChartHighlighter: BarChartHighlighter
                     pt.x = CGFloat(y)
                     
                     // take any transformer to determine the x-axis value
-                    self.chart?.getTransformer(set.axisDependency).pixelToValue(&pt)
+                    _chart?.getTransformer(set.axisDependency).pixelToValue(&pt)
                     
                     return getStackedHighlight(old: h, set: set, xIndex: h!.xIndex, dataSetIndex: h!.dataSetIndex, yValue: Double(pt.x))
                 }
@@ -46,9 +46,9 @@ public class HorizontalBarChartHighlighter: BarChartHighlighter
         }
     }
     
-    public override func getXIndex(x: Double) -> Int
+    internal override func getXIndex(x: Double) -> Int
     {
-        if let barChartData = self.chart?.data as? BarChartData
+        if let barChartData = _chart?.data as? BarChartData
         {
             if !barChartData.isGrouped
             {
@@ -56,7 +56,7 @@ public class HorizontalBarChartHighlighter: BarChartHighlighter
                 var pt = CGPoint(x: 0.0, y: x)
                 
                 // take any transformer to determine the x-axis value
-                self.chart?.getTransformer(ChartYAxis.AxisDependency.Left).pixelToValue(&pt)
+                _chart?.getTransformer(ChartYAxis.AxisDependency.Left).pixelToValue(&pt)
                 
                 return Int(round(pt.y))
             }
@@ -90,16 +90,16 @@ public class HorizontalBarChartHighlighter: BarChartHighlighter
     /// Returns the base y-value to the corresponding x-touch value in pixels.
     /// - parameter y:
     /// - returns:
-    public override func getBase(y: Double) -> Double
+    internal override func getBase(y: Double) -> Double
     {
-        if let barChartData = self.chart?.data as? BarChartData
+        if let barChartData = _chart?.data as? BarChartData
         {
             // create an array of the touch-point
             var pt = CGPoint()
             pt.y = CGFloat(y)
             
             // take any transformer to determine the x-axis value
-            self.chart?.getTransformer(ChartYAxis.AxisDependency.Left).pixelToValue(&pt)
+            _chart?.getTransformer(ChartYAxis.AxisDependency.Left).pixelToValue(&pt)
             let yVal = Double(pt.y)
             
             let setCount = barChartData.dataSetCount ?? 0
