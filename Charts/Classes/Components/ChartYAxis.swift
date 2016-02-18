@@ -217,7 +217,7 @@ public class ChartYAxis: ChartAxisBase
             return ""
         }
         
-        return (valueFormatter ?? _defaultValueFormatter).stringFromNumber(entries[index])!
+        return (valueFormatter ?? _defaultValueFormatter).stringFromNumber(Double(round(10*entries[index])/10))!
     }
     
     /// - returns: true if this axis needs horizontal offset, false if no offset is needed.
