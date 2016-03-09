@@ -55,28 +55,30 @@ public class ChartYAxis: ChartAxisBase
     
     /// if true, the set number of y-labels will be forced
     public var forceLabelsEnabled = false
-
+    
     /// the formatter used to customly format the y-labels
     public var valueFormatter: NSNumberFormatter?
+    
+    public var isTimeFormater: Bool = false
     
     /// the formatter used to customly format the y-labels
     internal var _defaultValueFormatter = NSNumberFormatter()
     
-    /// A custom minimum value for this axis. 
-    /// If set, this value will not be calculated automatically depending on the provided data. 
+    /// A custom minimum value for this axis.
+    /// If set, this value will not be calculated automatically depending on the provided data.
     /// Use `resetCustomAxisMin()` to undo this.
     /// Do not forget to set startAtZeroEnabled = false if you use this method.
     /// Otherwise, the axis-minimum value will still be forced to 0.
     public var customAxisMin = Double.NaN
-        
-    /// Set a custom maximum value for this axis. 
-    /// If set, this value will not be calculated automatically depending on the provided data. 
+    
+    /// Set a custom maximum value for this axis.
+    /// If set, this value will not be calculated automatically depending on the provided data.
     /// Use `resetCustomAxisMax()` to undo this.
     public var customAxisMax = Double.NaN
-
+    
     /// axis space from the largest value to the top in percent of the total axis range
     public var spaceTop = CGFloat(0.1)
-
+    
     /// axis space from the smallest value to the bottom in percent of the total axis range
     public var spaceBottom = CGFloat(0.1)
     
@@ -93,13 +95,13 @@ public class ChartYAxis: ChartAxisBase
     private var _axisDependency = AxisDependency.Left
     
     /// the minimum width that the axis should take
-    /// 
+    ///
     /// **default**: 0.0
     public var minWidth = CGFloat(0)
     
     /// the maximum width that the axis can take.
     /// use zero for disabling the maximum
-    /// 
+    ///
     /// **default**: 0.0 (no maximum specified)
     public var maxWidth = CGFloat(0)
     
@@ -107,10 +109,11 @@ public class ChartYAxis: ChartAxisBase
     {
         super.init()
         
-        _defaultValueFormatter.minimumIntegerDigits = 1
-        _defaultValueFormatter.maximumFractionDigits = 1
-        _defaultValueFormatter.minimumFractionDigits = 1
-        _defaultValueFormatter.usesGroupingSeparator = true
+        _defaultValueFormatter.numberStyle = .NoStyle
+        //        _defaultValueFormatter.minimumIntegerDigits = 1
+        //        _defaultValueFormatter.maximumFractionDigits = 1
+        //        _defaultValueFormatter.minimumFractionDigits = 1
+        //        _defaultValueFormatter.usesGroupingSeparator = true
         self.yOffset = 0.0
     }
     
@@ -120,16 +123,18 @@ public class ChartYAxis: ChartAxisBase
         
         _axisDependency = position
         
-        _defaultValueFormatter.minimumIntegerDigits = 1
-        _defaultValueFormatter.maximumFractionDigits = 1
-        _defaultValueFormatter.minimumFractionDigits = 1
-        _defaultValueFormatter.usesGroupingSeparator = true
+        _defaultValueFormatter.numberStyle = .NoStyle
+        //
+        //        _defaultValueFormatter.minimumIntegerDigits = 1
+        //        _defaultValueFormatter.maximumFractionDigits = 1
+        //        _defaultValueFormatter.minimumFractionDigits = 1
+        //        _defaultValueFormatter.usesGroupingSeparator = true
         self.yOffset = 0.0
     }
     
     public var axisDependency: AxisDependency
-    {
-        return _axisDependency
+        {
+            return _axisDependency
     }
     
     public func setLabelCount(count: Int, force: Bool)
@@ -144,7 +149,7 @@ public class ChartYAxis: ChartAxisBase
         {
             _labelCount = 2
         }
-    
+        
         forceLabelsEnabled = force
     }
     
@@ -154,7 +159,7 @@ public class ChartYAxis: ChartAxisBase
     /// default = 6,
     /// be aware that this number is not fixed and can only be approximated
     public var labelCount: Int
-    {
+        {
         get
         {
             return _labelCount
@@ -191,7 +196,7 @@ public class ChartYAxis: ChartAxisBase
     {
         return requiredSize().height + 2.5 * 2.0 + yOffset
     }
-
+    
     public override func getLongestLabel() -> String
     {
         var longest = ""
@@ -208,7 +213,7 @@ public class ChartYAxis: ChartAxisBase
         
         return longest
     }
-
+    
     /// - returns: the formatted y-label at the specified index. This will either use the auto-formatter or the custom formatter (if one is set).
     public func getFormattedLabel(index: Int) -> String
     {
@@ -217,29 +222,47 @@ public class ChartYAxis: ChartAxisBase
             return ""
         }
         
-        return (valueFormatter ?? _defaultValueFormatter).stringFromNumber(Double(round(10*entries[index])/10))!
+        return timeString(entries[index])
+        
     }
     
+    
+    private func timeString(time: Double) -> String {
+        let value =  time
+        let delta = value - Double(Int(value))
+        var timeString : String = ""
+        if delta > 0 {
+            if Int(value) == 0 {
+                timeString = " \(Int(delta * 60))m"
+            }else{
+                timeString = " \(Int(value))h \(Int(delta * 60))m"
+            }
+        }else{
+            timeString = " \(Int(value))h"
+        }
+        
+        return timeString
+    }
     /// - returns: true if this axis needs horizontal offset, false if no offset is needed.
     public var needsOffset: Bool
-    {
-        if (isEnabled && isDrawLabelsEnabled && labelPosition == .OutsideChart)
         {
-            return true
-        }
-        else
-        {
-            return false
-        }
+            if (isEnabled && isDrawLabelsEnabled && labelPosition == .OutsideChart)
+            {
+                return true
+            }
+            else
+            {
+                return false
+            }
     }
     
     public var isInverted: Bool { return inverted; }
     
     public var isStartAtZeroEnabled: Bool { return startAtZeroEnabled; }
-
+    
     /// - returns: true if focing the y-label count is enabled. Default: false
     public var isForceLabelsEnabled: Bool { return forceLabelsEnabled }
-
+    
     public var isShowOnlyMinMaxEnabled: Bool { return showOnlyMinMaxEnabled; }
     
     public var isDrawTopYLabelEntryEnabled: Bool { return drawTopYLabelEntryEnabled; }
