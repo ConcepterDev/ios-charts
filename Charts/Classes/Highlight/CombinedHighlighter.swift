@@ -2,66 +2,69 @@
 //  CombinedHighlighter.swift
 //  Charts
 //
-//  Created by Daniel Cohen Gindi on 26/7/15.
-
-//
 //  Copyright 2015 Daniel Cohen Gindi & Philipp Jahoda
 //  A port of MPAndroidChart for iOS
 //  Licensed under Apache License 2.0
 //
-//  https://github.com/danielgindi/ios-charts
+//  https://github.com/danielgindi/Charts
 //
 
 import Foundation
 import CoreGraphics
 
-internal class CombinedHighlighter: ChartHighlighter
+@objc(CombinedChartHighlighter)
+public class CombinedHighlighter: ChartHighlighter
 {
-    internal init(chart: CombinedChartView)
+    /// bar highlighter for supporting stacked highlighting
+    private var barHighlighter: BarHighlighter?
+    
+    public init(chart: CombinedChartDataProvider, barDataProvider: BarChartDataProvider)
     {
         super.init(chart: chart)
+        
+        // if there is BarData, create a BarHighlighter
+        self.barHighlighter = barDataProvider.barData == nil ? nil : BarHighlighter(chart: barDataProvider)
     }
     
-    /// Returns a list of SelectionDetail object corresponding to the given xIndex.
-    /// - parameter xIndex:
-    /// - returns:
-    internal override func getSelectionDetailsAtIndex(xIndex: Int) -> [ChartSelectionDetail]
+    public override func getHighlights(xValue xValue: Double, x: CGFloat, y: CGFloat) -> [Highlight]
     {
-        var vals = [ChartSelectionDetail]()
+        var vals = [Highlight]()
         
-        if let data = _chart?.data as? CombinedChartData
+        guard let chart = self.chart as? CombinedChartDataProvider
+            else { return vals }
+        
+        if let dataObjects = chart.combinedData?.allData
         {
-            // get all chartdata objects
-            var dataObjects = data.allData
-            
-            var pt = CGPoint()
-            
-            for var i = 0; i < dataObjects.count; i++
+            for i in 0..<dataObjects.count
             {
-                for var j = 0; j < dataObjects[i].dataSetCount; j++
+                let dataObject = dataObjects[i]
+                
+                // in case of BarData, let the BarHighlighter take over
+                if barHighlighter != nil && dataObject is BarChartData
                 {
-                    let dataSet = dataObjects[i].getDataSetByIndex(j)
-                    
-                    // dont include datasets that cannot be highlighted
-                    if !dataSet.isHighlightEnabled
+                    if let high = barHighlighter?.getHighlight(x: x, y: y)
                     {
-                        continue
+                        high.dataIndex = i
+                        vals.append(high)
                     }
-                    
-                    // extract all y-values from all DataSets at the given x-index
-                    let yVal = dataSet.yValForXIndex(xIndex)
-                    if yVal.isNaN
+                }
+                else
+                {
+                    for j in 0..<dataObject.dataSetCount
                     {
-                        continue
-                    }
-                    
-                    pt.y = CGFloat(yVal)
-                    
-                    _chart!.getTransformer(dataSet.axisDependency).pointValueToPixel(&pt)
-                    
-                    if !pt.y.isNaN
-                    {
-                        vals.append(ChartSelectionDetail(value: Double(pt.y), dataSetIndex: j, dataSet: dataSet))
+                        let dataSet = dataObjects[i].getDataSetByIndex(j)
+                        
+                        // don't include datasets that cannot be highlighted
+                        if !dataSet.isHighlightEnabled
+                        {
+                            continue
+                        }
+                        
+                        if let s1 = buildHighlight(dataSet: dataSet, dataSetIndex: j, xValue: xValue, rounding: .Closest)
+                        {
+                            s1.dataIndex = i
+                            vals.append(s1)
+                        }
                     }
                 }
             }

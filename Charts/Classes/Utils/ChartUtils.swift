@@ -2,23 +2,23 @@
 //  Utils.swift
 //  Charts
 //
-//  Created by Daniel Cohen Gindi on 23/2/15.
-
-//
 //  Copyright 2015 Daniel Cohen Gindi & Philipp Jahoda
 //  A port of MPAndroidChart for iOS
 //  Licensed under Apache License 2.0
 //
-//  https://github.com/danielgindi/ios-charts
+//  https://github.com/danielgindi/Charts
 //
 
 import Foundation
-import UIKit
-import Darwin
+import CoreGraphics
+
+#if !os(OSX)
+    import UIKit
+#endif
 
 public class ChartUtils
 {
-    private static var _defaultValueFormatter: NSNumberFormatter = ChartUtils.generateDefaultValueFormatter()
+    private static var _defaultValueFormatter: IValueFormatter = ChartUtils.generateDefaultValueFormatter()
     
     internal struct Math
     {
@@ -64,52 +64,6 @@ public class ChartUtils
             return number + DBL_EPSILON
         }
     }
-
-    /// - returns: the index of the DataSet that contains the closest value on the y-axis. This will return -Integer.MAX_VALUE if failure.
-    internal class func closestDataSetIndex(valsAtIndex: [ChartSelectionDetail], value: Double, axis: ChartYAxis.AxisDependency?) -> Int
-    {
-        var index = -Int.max
-        var distance = DBL_MAX
-        
-        for (var i = 0; i < valsAtIndex.count; i++)
-        {
-            let sel = valsAtIndex[i]
-            
-            if (axis == nil || sel.dataSet?.axisDependency == axis)
-            {
-                let cdistance = abs(sel.value - value)
-                if (cdistance < distance)
-                {
-                    index = valsAtIndex[i].dataSetIndex
-                    distance = cdistance
-                }
-            }
-        }
-        
-        return index
-    }
-    
-    /// - returns: the minimum distance from a touch-y-value (in pixels) to the closest y-value (in pixels) that is displayed in the chart.
-    internal class func getMinimumDistance(valsAtIndex: [ChartSelectionDetail], val: Double, axis: ChartYAxis.AxisDependency) -> Double
-    {
-        var distance = DBL_MAX
-        
-        for (var i = 0, count = valsAtIndex.count; i < count; i++)
-        {
-            let sel = valsAtIndex[i]
-            
-            if (sel.dataSet!.axisDependency == axis)
-            {
-                let cdistance = abs(sel.value - val)
-                if (cdistance < distance)
-                {
-                    distance = cdistance
-                }
-            }
-        }
-        
-        return distance
-    }
     
     /// Calculates the position around a center point, depending on the distance from the center, and the angle of the position around the center.
     internal class func getPosition(center center: CGPoint, dist: CGFloat, angle: CGFloat) -> CGPoint
@@ -120,8 +74,10 @@ public class ChartUtils
         )
     }
     
-    public class func drawText(context context: CGContext, text: String, var point: CGPoint, align: NSTextAlignment, attributes: [String : AnyObject]?)
+    public class func drawText(context context: CGContext, text: String, point: CGPoint, align: NSTextAlignment, attributes: [String : AnyObject]?)
     {
+        var point = point
+        
         if (align == .Center)
         {
             point.x -= text.sizeWithAttributes(attributes).width / 2.0
@@ -131,18 +87,18 @@ public class ChartUtils
             point.x -= text.sizeWithAttributes(attributes).width
         }
         
-        UIGraphicsPushContext(context)
+        NSUIGraphicsPushContext(context)
         
         (text as NSString).drawAtPoint(point, withAttributes: attributes)
         
-        UIGraphicsPopContext()
+        NSUIGraphicsPopContext()
     }
     
     public class func drawText(context context: CGContext, text: String, point: CGPoint, attributes: [String : AnyObject]?, anchor: CGPoint, angleRadians: CGFloat)
     {
         var drawOffset = CGPoint()
         
-        UIGraphicsPushContext(context)
+        NSUIGraphicsPushContext(context)
         
         if angleRadians != 0.0
         {
@@ -187,14 +143,14 @@ public class ChartUtils
             (text as NSString).drawAtPoint(drawOffset, withAttributes: attributes)
         }
         
-        UIGraphicsPopContext()
+        NSUIGraphicsPopContext()
     }
     
     internal class func drawMultilineText(context context: CGContext, text: String, knownTextSize: CGSize, point: CGPoint, attributes: [String : AnyObject]?, constrainedToSize: CGSize, anchor: CGPoint, angleRadians: CGFloat)
     {
         var rect = CGRect(origin: CGPoint(), size: knownTextSize)
         
-        UIGraphicsPushContext(context)
+        NSUIGraphicsPushContext(context)
         
         if angleRadians != 0.0
         {
@@ -235,7 +191,7 @@ public class ChartUtils
             (text as NSString).drawWithRect(rect, options: .UsesLineFragmentOrigin, attributes: attributes, context: nil)
         }
         
-        UIGraphicsPopContext()
+        NSUIGraphicsPopContext()
     }
     
     internal class func drawMultilineText(context context: CGContext, text: String, point: CGPoint, attributes: [String : AnyObject]?, constrainedToSize: CGSize, anchor: CGPoint, angleRadians: CGFloat)
@@ -244,9 +200,11 @@ public class ChartUtils
         drawMultilineText(context: context, text: text, knownTextSize: rect.size, point: point, attributes: attributes, constrainedToSize: constrainedToSize, anchor: anchor, angleRadians: angleRadians)
     }
     
-    /// - returns: an angle between 0.0 < 360.0 (not less than zero, less than 360)
-    internal class func normalizedAngleFromAngle(var angle: CGFloat) -> CGFloat
+    /// - returns: An angle between 0.0 < 360.0 (not less than zero, less than 360)
+    internal class func normalizedAngleFromAngle(angle: CGFloat) -> CGFloat
     {
+        var angle = angle
+        
         while (angle < 0.0)
         {
             angle += 360.0
@@ -255,18 +213,14 @@ public class ChartUtils
         return angle % 360.0
     }
     
-    private class func generateDefaultValueFormatter() -> NSNumberFormatter
+    private class func generateDefaultValueFormatter() -> IValueFormatter
     {
-        let formatter = NSNumberFormatter()
-        formatter.minimumIntegerDigits = 1
-        formatter.maximumFractionDigits = 1
-        formatter.minimumFractionDigits = 1
-        formatter.usesGroupingSeparator = true
+        let formatter = DefaultValueFormatter(decimals: 1)
         return formatter
     }
     
-    /// - returns: the default value formatter used for all chart components that needs a default
-    internal class func defaultValueFormatter() -> NSNumberFormatter
+    /// - returns: The default value formatter used for all chart components that needs a default
+    public class func defaultValueFormatter() -> IValueFormatter
     {
         return _defaultValueFormatter
     }
@@ -298,7 +252,7 @@ public class ChartUtils
     
     /// MARK: - Bridging functions
     
-    internal class func bridgedObjCGetUIColorArray (swift array: [UIColor?]) -> [NSObject]
+    internal class func bridgedObjCGetNSUIColorArray (swift array: [NSUIColor?]) -> [NSObject]
     {
         var newArray = [NSObject]()
         for val in array
@@ -315,12 +269,12 @@ public class ChartUtils
         return newArray
     }
     
-    internal class func bridgedObjCGetUIColorArray (objc array: [NSObject]) -> [UIColor?]
+    internal class func bridgedObjCGetNSUIColorArray (objc array: [NSObject]) -> [NSUIColor?]
     {
-        var newArray = [UIColor?]()
+        var newArray = [NSUIColor?]()
         for object in array
         {
-            newArray.append(object as? UIColor)
+            newArray.append(object as? NSUIColor)
         }
         return newArray
     }

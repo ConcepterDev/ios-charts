@@ -2,75 +2,94 @@
 //  RadarChartRenderer.swift
 //  Charts
 //
-//  Created by Daniel Cohen Gindi on 4/3/15.
-//
 //  Copyright 2015 Daniel Cohen Gindi & Philipp Jahoda
 //  A port of MPAndroidChart for iOS
 //  Licensed under Apache License 2.0
 //
-//  https://github.com/danielgindi/ios-charts
+//  https://github.com/danielgindi/Charts
 //
 
 import Foundation
 import CoreGraphics
-import UIKit
 
-public class RadarChartRenderer: LineScatterCandleRadarChartRenderer
+#if !os(OSX)
+    import UIKit
+#endif
+
+
+public class RadarChartRenderer: LineRadarRenderer
 {
-    internal weak var _chart: RadarChartView!
+    public weak var chart: RadarChartView?
 
-    public init(chart: RadarChartView, animator: ChartAnimator?, viewPortHandler: ChartViewPortHandler)
+    public init(chart: RadarChartView?, animator: Animator?, viewPortHandler: ViewPortHandler?)
     {
         super.init(animator: animator, viewPortHandler: viewPortHandler)
         
-        _chart = chart
+        self.chart = chart
     }
     
     public override func drawData(context context: CGContext)
     {
-        if (_chart !== nil)
+        guard let chart = chart else { return }
+        
+        let radarData = chart.data
+        
+        if (radarData != nil)
         {
-            let radarData = _chart.data
+            let mostEntries = radarData?.maxEntryCountSet?.entryCount ?? 0
             
-            if (radarData != nil)
+            for set in radarData!.dataSets as! [IRadarChartDataSet]
             {
-                for set in radarData!.dataSets as! [RadarChartDataSet]
+                if set.isVisible
                 {
-                    if set.isVisible && set.entryCount > 0
-                    {
-                        drawDataSet(context: context, dataSet: set)
-                    }
+                    drawDataSet(context: context, dataSet: set, mostEntries: mostEntries)
                 }
             }
         }
     }
     
-    internal func drawDataSet(context context: CGContext, dataSet: RadarChartDataSet)
+    /// Draws the RadarDataSet
+    ///
+    /// - parameter context:
+    /// - parameter dataSet:
+    /// - parameter mostEntries: the entry count of the dataset with the most entries
+    internal func drawDataSet(context context: CGContext, dataSet: IRadarChartDataSet, mostEntries: Int)
     {
+        guard let
+            chart = chart,
+            animator = animator
+            else { return }
+        
         CGContextSaveGState(context)
         
-        let sliceangle = _chart.sliceAngle
+        let phaseX = animator.phaseX
+        let phaseY = animator.phaseY
+        
+        let sliceangle = chart.sliceAngle
         
         // calculate the factor that is needed for transforming the value to pixels
-        let factor = _chart.factor
+        let factor = chart.factor
         
-        let center = _chart.centerOffsets
-        var entries = dataSet.yVals
+        let center = chart.centerOffsets
+        let entryCount = dataSet.entryCount
         let path = CGPathCreateMutable()
         var hasMovedToPoint = false
         
-        for (var j = 0; j < entries.count; j++)
+        for j in 0 ..< entryCount
         {
-            let e = entries[j]
+            guard let e = dataSet.entryForIndex(j) else { continue }
             
-            let p = ChartUtils.getPosition(center: center, dist: CGFloat(e.value - _chart.chartYMin) * factor, angle: sliceangle * CGFloat(j) + _chart.rotationAngle)
+            let p = ChartUtils.getPosition(
+                center: center,
+                dist: CGFloat((e.y - chart.chartYMin) * Double(factor) * phaseY),
+                angle: sliceangle * CGFloat(j) * CGFloat(phaseX) + chart.rotationAngle)
             
-            if (p.x.isNaN)
+            if p.x.isNaN
             {
                 continue
             }
             
-            if (!hasMovedToPoint)
+            if !hasMovedToPoint
             {
                 CGPathMoveToPoint(path, nil, p.x, p.y)
                 hasMovedToPoint = true
@@ -81,21 +100,30 @@ public class RadarChartRenderer: LineScatterCandleRadarChartRenderer
             }
         }
         
+        // if this is the largest set, close it
+        if dataSet.entryCount < mostEntries
+        {
+            // if this is not the largest set, draw a line to the center before closing
+            CGPathAddLineToPoint(path, nil, center.x, center.y)
+        }
+        
         CGPathCloseSubpath(path)
         
         // draw filled
-        if (dataSet.isDrawFilledEnabled)
+        if dataSet.isDrawFilledEnabled
         {
-            CGContextSetFillColorWithColor(context, dataSet.colorAt(0).CGColor)
-            CGContextSetAlpha(context, dataSet.fillAlpha)
-            
-            CGContextBeginPath(context)
-            CGContextAddPath(context, path)
-            CGContextFillPath(context)
+            if dataSet.fill != nil
+            {
+                drawFilledPath(context: context, path: path, fill: dataSet.fill!, fillAlpha: dataSet.fillAlpha)
+            }
+            else
+            {
+                drawFilledPath(context: context, path: path, fillColor: dataSet.fillColor, fillAlpha: dataSet.fillAlpha)
+            }
         }
         
         // draw the line (only if filled is disabled or alpha is below 255)
-        if (!dataSet.isDrawFilledEnabled || dataSet.fillAlpha < 1.0)
+        if !dataSet.isDrawFilledEnabled || dataSet.fillAlpha < 1.0
         {
             CGContextSetStrokeColorWithColor(context, dataSet.colorAt(0).CGColor)
             CGContextSetLineWidth(context, dataSet.lineWidth)
@@ -111,45 +139,60 @@ public class RadarChartRenderer: LineScatterCandleRadarChartRenderer
     
     public override func drawValues(context context: CGContext)
     {
-        if _chart.data == nil
-        {
-            return
-        }
+        guard let
+            chart = chart,
+            data = chart.data,
+            animator = animator
+            else { return }
         
-        let data = _chart.data!
+        let phaseX = animator.phaseX
+        let phaseY = animator.phaseY
         
-        let sliceangle = _chart.sliceAngle
+        let sliceangle = chart.sliceAngle
         
         // calculate the factor that is needed for transforming the value to pixels
-        let factor = _chart.factor
+        let factor = chart.factor
         
-        let center = _chart.centerOffsets
+        let center = chart.centerOffsets
         
         let yoffset = CGFloat(5.0)
         
-        for (var i = 0, count = data.dataSetCount; i < count; i++)
+        for i in 0 ..< data.dataSetCount
         {
-            let dataSet = data.getDataSetByIndex(i) as! RadarChartDataSet
+            let dataSet = data.getDataSetByIndex(i) as! IRadarChartDataSet
             
-            if !dataSet.isDrawValuesEnabled || dataSet.entryCount == 0
+            if !shouldDrawValues(forDataSet: dataSet)
             {
                 continue
             }
             
-            var entries = dataSet.yVals
+            let entryCount = dataSet.entryCount
             
-            for (var j = 0; j < entries.count; j++)
+            for j in 0 ..< entryCount
             {
-                let e = entries[j]
+                guard let e = dataSet.entryForIndex(j) else { continue }
                 
-                let p = ChartUtils.getPosition(center: center, dist: CGFloat(e.value) * factor, angle: sliceangle * CGFloat(j) + _chart.rotationAngle)
+                let p = ChartUtils.getPosition(
+                    center: center,
+                    dist: CGFloat(e.y - chart.chartYMin) * factor * CGFloat(phaseY),
+                    angle: sliceangle * CGFloat(j) * CGFloat(phaseX) + chart.rotationAngle)
                 
                 let valueFont = dataSet.valueFont
-                let valueTextColor = dataSet.valueTextColor
                 
-                let formatter = dataSet.valueFormatter
+                guard let formatter = dataSet.valueFormatter else { continue }
                 
-                ChartUtils.drawText(context: context, text: formatter!.stringFromNumber(e.value)!, point: CGPoint(x: p.x, y: p.y - yoffset - valueFont.lineHeight), align: .Center, attributes: [NSFontAttributeName: valueFont, NSForegroundColorAttributeName: valueTextColor])
+                ChartUtils.drawText(
+                    context: context,
+                    text: formatter.stringForValue(
+                        e.y,
+                        entry: e,
+                        dataSetIndex: i,
+                        viewPortHandler: viewPortHandler),
+                    point: CGPoint(x: p.x, y: p.y - yoffset - valueFont.lineHeight),
+                    align: .Center,
+                    attributes: [NSFontAttributeName: valueFont,
+                        NSForegroundColorAttributeName: dataSet.valueTextColorAt(j)]
+                )
             }
         }
     }
@@ -161,29 +204,38 @@ public class RadarChartRenderer: LineScatterCandleRadarChartRenderer
     
     private var _webLineSegmentsBuffer = [CGPoint](count: 2, repeatedValue: CGPoint())
     
-    internal func drawWeb(context context: CGContext)
+    public func drawWeb(context context: CGContext)
     {
-        let sliceangle = _chart.sliceAngle
+        guard let
+            chart = chart,
+            data = chart.data
+            else { return }
+        
+        let sliceangle = chart.sliceAngle
         
         CGContextSaveGState(context)
         
         // calculate the factor that is needed for transforming the value to
         // pixels
-        let factor = _chart.factor
-        let rotationangle = _chart.rotationAngle
+        let factor = chart.factor
+        let rotationangle = chart.rotationAngle
         
-        let center = _chart.centerOffsets
+        let center = chart.centerOffsets
         
         // draw the web lines that come from the center
-        CGContextSetLineWidth(context, _chart.webLineWidth)
-        CGContextSetStrokeColorWithColor(context, _chart.webColor.CGColor)
-        CGContextSetAlpha(context, _chart.webAlpha)
+        CGContextSetLineWidth(context, chart.webLineWidth)
+        CGContextSetStrokeColorWithColor(context, chart.webColor.CGColor)
+        CGContextSetAlpha(context, chart.webAlpha)
         
-        let xIncrements = 1 + _chart.skipWebLineCount
-        
-        for var i = 0, xValCount = _chart.data!.xValCount; i < xValCount; i += xIncrements
+        let xIncrements = 1 + chart.skipWebLineCount
+        let maxEntryCount = chart.data?.maxEntryCountSet?.entryCount ?? 0
+
+        for i in 0.stride(to: maxEntryCount, by: xIncrements)
         {
-            let p = ChartUtils.getPosition(center: center, dist: CGFloat(_chart.yRange) * factor, angle: sliceangle * CGFloat(i) + rotationangle)
+            let p = ChartUtils.getPosition(
+                center: center,
+                dist: CGFloat(chart.yRange) * factor,
+                angle: sliceangle * CGFloat(i) + rotationangle)
             
             _webLineSegmentsBuffer[0].x = center.x
             _webLineSegmentsBuffer[0].y = center.y
@@ -194,17 +246,17 @@ public class RadarChartRenderer: LineScatterCandleRadarChartRenderer
         }
         
         // draw the inner-web
-        CGContextSetLineWidth(context, _chart.innerWebLineWidth)
-        CGContextSetStrokeColorWithColor(context, _chart.innerWebColor.CGColor)
-        CGContextSetAlpha(context, _chart.webAlpha)
+        CGContextSetLineWidth(context, chart.innerWebLineWidth)
+        CGContextSetStrokeColorWithColor(context, chart.innerWebColor.CGColor)
+        CGContextSetAlpha(context, chart.webAlpha)
         
-        let labelCount = _chart.yAxis.entryCount
+        let labelCount = chart.yAxis.entryCount
         
-        for (var j = 0; j < labelCount; j++)
+        for j in 0 ..< labelCount
         {
-            for (var i = 0, xValCount = _chart.data!.xValCount; i < xValCount; i++)
+            for i in 0 ..< data.entryCount
             {
-                let r = CGFloat(_chart.yAxis.entries[j] - _chart.chartYMin) * factor
+                let r = CGFloat(chart.yAxis.entries[j] - chart.chartYMin) * factor
 
                 let p1 = ChartUtils.getPosition(center: center, dist: r, angle: sliceangle * CGFloat(i) + rotationangle)
                 let p2 = ChartUtils.getPosition(center: center, dist: r, angle: sliceangle * CGFloat(i + 1) + rotationangle)
@@ -223,64 +275,121 @@ public class RadarChartRenderer: LineScatterCandleRadarChartRenderer
     
     private var _highlightPointBuffer = CGPoint()
 
-    public override func drawHighlighted(context context: CGContext, indices: [ChartHighlight])
+    public override func drawHighlighted(context context: CGContext, indices: [Highlight])
     {
-        if _chart.data == nil
-        {
-            return
-        }
-        
-        let data = _chart.data as! RadarChartData
+        guard let
+            chart = chart,
+            radarData = chart.data as? RadarChartData,
+            animator = animator
+            else { return }
         
         CGContextSaveGState(context)
-        CGContextSetLineWidth(context, data.highlightLineWidth)
-        if (data.highlightLineDashLengths != nil)
-        {
-            CGContextSetLineDash(context, data.highlightLineDashPhase, data.highlightLineDashLengths!, data.highlightLineDashLengths!.count)
-        }
-        else
-        {
-            CGContextSetLineDash(context, 0.0, nil, 0)
-        }
         
-        let sliceangle = _chart.sliceAngle
-        let factor = _chart.factor
+        let sliceangle = chart.sliceAngle
         
-        let center = _chart.centerOffsets
+        // calculate the factor that is needed for transforming the value pixels
+        let factor = chart.factor
         
-        for (var i = 0; i < indices.count; i++)
+        let center = chart.centerOffsets
+        
+        for high in indices
         {
-            guard let set = _chart.data?.getDataSetByIndex(indices[i].dataSetIndex) as? RadarChartDataSet else { continue }
+            guard let set = chart.data?.getDataSetByIndex(high.dataSetIndex) as? IRadarChartDataSet
+                where set.isHighlightEnabled
+                else { continue }
             
-            if !set.isHighlightEnabled
+            guard let e = set.entryForIndex(Int(high.x)) as? RadarChartDataEntry
+                else { continue }
+            
+            if !isInBoundsX(entry: e, dataSet: set)
             {
                 continue
+            }
+            
+            CGContextSetLineWidth(context, radarData.highlightLineWidth)
+            if (radarData.highlightLineDashLengths != nil)
+            {
+                CGContextSetLineDash(context, radarData.highlightLineDashPhase, radarData.highlightLineDashLengths!, radarData.highlightLineDashLengths!.count)
+            }
+            else
+            {
+                CGContextSetLineDash(context, 0.0, nil, 0)
             }
             
             CGContextSetStrokeColorWithColor(context, set.highlightColor.CGColor)
             
-            // get the index to highlight
-            let xIndex = indices[i].xIndex
+            let y = e.y - chart.chartYMin
             
-            let e = set.entryForXIndex(xIndex)
-            if e?.xIndex != xIndex
-            {
-                continue
-            }
+            _highlightPointBuffer = ChartUtils.getPosition(
+                center: center,
+                dist: CGFloat(y) * factor * CGFloat(animator.phaseY),
+                angle: sliceangle * CGFloat(high.x) * CGFloat(animator.phaseX) + chart.rotationAngle)
             
-            let j = set.entryIndex(entry: e!, isEqual: true)
-            let y = (e!.value - _chart.chartYMin)
-            
-            if (y.isNaN)
-            {
-                continue
-            }
-            
-            _highlightPointBuffer = ChartUtils.getPosition(center: center, dist: CGFloat(y) * factor,
-                angle: sliceangle * CGFloat(j) + _chart.rotationAngle)
+            high.setDraw(pt: _highlightPointBuffer)
             
             // draw the lines
             drawHighlightLines(context: context, point: _highlightPointBuffer, set: set)
+            
+            if (set.isDrawHighlightCircleEnabled)
+            {
+                if (!_highlightPointBuffer.x.isNaN && !_highlightPointBuffer.y.isNaN)
+                {
+                    var strokeColor = set.highlightCircleStrokeColor
+                    if strokeColor == nil
+                    {
+                        strokeColor = set.colorAt(0)
+                    }
+                    if set.highlightCircleStrokeAlpha < 1.0
+                    {
+                        strokeColor = strokeColor?.colorWithAlphaComponent(set.highlightCircleStrokeAlpha)
+                    }
+                    
+                    drawHighlightCircle(
+                        context: context,
+                        atPoint: _highlightPointBuffer,
+                        innerRadius: set.highlightCircleInnerRadius,
+                        outerRadius: set.highlightCircleOuterRadius,
+                        fillColor: set.highlightCircleFillColor,
+                        strokeColor: strokeColor,
+                        strokeWidth: set.highlightCircleStrokeWidth)
+                }
+            }
+        }
+        
+        CGContextRestoreGState(context)
+    }
+    
+    internal func drawHighlightCircle(
+        context context: CGContext,
+        atPoint point: CGPoint,
+        innerRadius: CGFloat,
+        outerRadius: CGFloat,
+        fillColor: NSUIColor?,
+        strokeColor: NSUIColor?,
+        strokeWidth: CGFloat)
+    {
+        CGContextSaveGState(context)
+        
+        if let fillColor = fillColor
+        {
+            CGContextBeginPath(context)
+            CGContextAddEllipseInRect(context, CGRectMake(point.x - outerRadius, point.y - outerRadius, outerRadius * 2.0, outerRadius * 2.0))
+            if innerRadius > 0.0
+            {
+                CGContextAddEllipseInRect(context, CGRectMake(point.x - innerRadius, point.y - innerRadius, innerRadius * 2.0, innerRadius * 2.0))
+            }
+            
+            CGContextSetFillColorWithColor(context, fillColor.CGColor)
+            CGContextEOFillPath(context)
+        }
+            
+        if let strokeColor = strokeColor
+        {
+            CGContextBeginPath(context)
+            CGContextAddEllipseInRect(context, CGRectMake(point.x - outerRadius, point.y - outerRadius, outerRadius * 2.0, outerRadius * 2.0))
+            CGContextSetStrokeColorWithColor(context, strokeColor.CGColor)
+            CGContextSetLineWidth(context, strokeWidth)
+            CGContextStrokePath(context)
         }
         
         CGContextRestoreGState(context)

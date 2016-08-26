@@ -2,13 +2,11 @@
 //  LineChart2ViewController.m
 //  ChartsDemo
 //
-//  Created by Daniel Cohen Gindi on 17/3/15.
-//
 //  Copyright 2015 Daniel Cohen Gindi & Philipp Jahoda
 //  A port of MPAndroidChart for iOS
 //  Licensed under Apache License 2.0
 //
-//  https://github.com/danielgindi/ios-charts
+//  https://github.com/danielgindi/Charts
 //
 
 #import "LineChart2ViewController.h"
@@ -30,21 +28,23 @@
 {
     [super viewDidLoad];
     
-    self.title = @"Line Chart 2 Chart";
+    self.title = @"Line Chart 2";
     
     self.options = @[
                      @{@"key": @"toggleValues", @"label": @"Toggle Values"},
                      @{@"key": @"toggleFilled", @"label": @"Toggle Filled"},
                      @{@"key": @"toggleCircles", @"label": @"Toggle Circles"},
                      @{@"key": @"toggleCubic", @"label": @"Toggle Cubic"},
+                     @{@"key": @"toggleHorizontalCubic", @"label": @"Toggle Horizontal Cubic"},
+                     @{@"key": @"toggleStepped", @"label": @"Toggle Stepped"},
                      @{@"key": @"toggleHighlight", @"label": @"Toggle Highlight"},
-                     @{@"key": @"toggleStartZero", @"label": @"Toggle StartZero"},
                      @{@"key": @"animateX", @"label": @"Animate X"},
                      @{@"key": @"animateY", @"label": @"Animate Y"},
                      @{@"key": @"animateXY", @"label": @"Animate XY"},
                      @{@"key": @"saveToGallery", @"label": @"Save to Camera Roll"},
                      @{@"key": @"togglePinchZoom", @"label": @"Toggle PinchZoom"},
                      @{@"key": @"toggleAutoScaleMinMax", @"label": @"Toggle auto scale min/max"},
+                     @{@"key": @"toggleData", @"label": @"Toggle Data"},
                      ];
     
     _chartView.delegate = self;
@@ -65,25 +65,27 @@
     _chartView.legend.position = ChartLegendPositionBelowChartLeft;
     
     ChartXAxis *xAxis = _chartView.xAxis;
-    xAxis.labelFont = [UIFont systemFontOfSize:12.f];
+    xAxis.labelFont = [UIFont systemFontOfSize:11.f];
     xAxis.labelTextColor = UIColor.whiteColor;
     xAxis.drawGridLinesEnabled = NO;
     xAxis.drawAxisLineEnabled = NO;
-    xAxis.spaceBetweenLabels = 1.0;
     
     ChartYAxis *leftAxis = _chartView.leftAxis;
     leftAxis.labelTextColor = [UIColor colorWithRed:51/255.f green:181/255.f blue:229/255.f alpha:1.f];
-    leftAxis.customAxisMax = 200.0;
+    leftAxis.axisMaximum = 200.0;
+    leftAxis.axisMinimum = 0.0;
     leftAxis.drawGridLinesEnabled = YES;
+    leftAxis.drawZeroLineEnabled = NO;
+    leftAxis.granularityEnabled = YES;
     
     ChartYAxis *rightAxis = _chartView.rightAxis;
     rightAxis.labelTextColor = UIColor.redColor;
-    rightAxis.customAxisMax = 900.0;
-    rightAxis.startAtZeroEnabled = NO;
-    rightAxis.customAxisMin = -200.0;
+    rightAxis.axisMaximum = 900.0;
+    rightAxis.axisMinimum = -200.0;
     rightAxis.drawGridLinesEnabled = NO;
+    rightAxis.granularityEnabled = NO;
     
-    _sliderX.value = 19.0;
+    _sliderX.value = 20.0;
     _sliderY.value = 30.0;
     [self slidersValueChanged:nil];
     
@@ -96,34 +98,27 @@
     // Dispose of any resources that can be recreated.
 }
 
-- (void)setDataCount:(int)count range:(double)range
+- (void)updateChartData
 {
-    NSMutableArray *xVals = [[NSMutableArray alloc] init];
-    
-    for (int i = 0; i < count; i++)
+    if (self.shouldHideData)
     {
-        [xVals addObject:[@(i) stringValue]];
+        _chartView.data = nil;
+        return;
     }
     
-    NSMutableArray *yVals = [[NSMutableArray alloc] init];
+    [self setDataCount:_sliderX.value + 1 range:_sliderY.value];
+}
+
+- (void)setDataCount:(int)count range:(double)range
+{
+    NSMutableArray *yVals1 = [[NSMutableArray alloc] init];
     
     for (int i = 0; i < count; i++)
     {
         double mult = range / 2.0;
         double val = (double) (arc4random_uniform(mult)) + 50;
-        [yVals addObject:[[ChartDataEntry alloc] initWithValue:val xIndex:i]];
+        [yVals1 addObject:[[ChartDataEntry alloc] initWithX:i y:val]];
     }
-    
-    LineChartDataSet *set1 = [[LineChartDataSet alloc] initWithYVals:yVals label:@"DataSet 1"];
-    set1.axisDependency = AxisDependencyLeft;
-    [set1 setColor:[UIColor colorWithRed:51/255.f green:181/255.f blue:229/255.f alpha:1.f]];
-    [set1 setCircleColor:UIColor.whiteColor];
-    set1.lineWidth = 2.0;
-    set1.circleRadius = 3.0;
-    set1.fillAlpha = 65/255.0;
-    set1.fillColor = [UIColor colorWithRed:51/255.f green:181/255.f blue:229/255.f alpha:1.f];
-    set1.highlightColor = [UIColor colorWithRed:244/255.f green:117/255.f blue:117/255.f alpha:1.f];
-    set1.drawCircleHoleEnabled = NO;
     
     NSMutableArray *yVals2 = [[NSMutableArray alloc] init];
     
@@ -131,136 +126,135 @@
     {
         double mult = range;
         double val = (double) (arc4random_uniform(mult)) + 450;
-        [yVals2 addObject:[[ChartDataEntry alloc] initWithValue:val xIndex:i]];
+        [yVals2 addObject:[[ChartDataEntry alloc] initWithX:i y:val]];
     }
     
-    LineChartDataSet *set2 = [[LineChartDataSet alloc] initWithYVals:yVals2 label:@"DataSet 2"];
-    set2.axisDependency = AxisDependencyRight;
-    [set2 setColor:UIColor.redColor];
-    [set2 setCircleColor:UIColor.whiteColor];
-    set2.lineWidth = 2.0;
-    set2.circleRadius = 3.0;
-    set2.fillAlpha = 65/255.0;
-    set2.fillColor = UIColor.redColor;
-    set2.highlightColor = [UIColor colorWithRed:244/255.f green:117/255.f blue:117/255.f alpha:1.f];
-    set2.drawCircleHoleEnabled = NO;
+    LineChartDataSet *set1 = nil, *set2 = nil;
     
-    NSMutableArray *dataSets = [[NSMutableArray alloc] init];
-    [dataSets addObject:set2];
-    [dataSets addObject:set1];
-    
-    LineChartData *data = [[LineChartData alloc] initWithXVals:xVals dataSets:dataSets];
-    [data setValueTextColor:UIColor.whiteColor];
-    [data setValueFont:[UIFont systemFontOfSize:9.f]];
-    
-    _chartView.data = data;
+    if (_chartView.data.dataSetCount > 0)
+    {
+        set1 = (LineChartDataSet *)_chartView.data.dataSets[0];
+        set2 = (LineChartDataSet *)_chartView.data.dataSets[1];
+        set1.values = yVals1;
+        set2.values = yVals2;
+        [_chartView.data notifyDataChanged];
+        [_chartView notifyDataSetChanged];
+    }
+    else
+    {
+        set1 = [[LineChartDataSet alloc] initWithValues:yVals1 label:@"DataSet 1"];
+        set1.axisDependency = AxisDependencyLeft;
+        [set1 setColor:[UIColor colorWithRed:51/255.f green:181/255.f blue:229/255.f alpha:1.f]];
+        [set1 setCircleColor:UIColor.whiteColor];
+        set1.lineWidth = 2.0;
+        set1.circleRadius = 3.0;
+        set1.fillAlpha = 65/255.0;
+        set1.fillColor = [UIColor colorWithRed:51/255.f green:181/255.f blue:229/255.f alpha:1.f];
+        set1.highlightColor = [UIColor colorWithRed:244/255.f green:117/255.f blue:117/255.f alpha:1.f];
+        set1.drawCircleHoleEnabled = NO;
+        
+        set2 = [[LineChartDataSet alloc] initWithValues:yVals2 label:@"DataSet 2"];
+        set2.axisDependency = AxisDependencyRight;
+        [set2 setColor:UIColor.redColor];
+        [set2 setCircleColor:UIColor.whiteColor];
+        set2.lineWidth = 2.0;
+        set2.circleRadius = 3.0;
+        set2.fillAlpha = 65/255.0;
+        set2.fillColor = UIColor.redColor;
+        set2.highlightColor = [UIColor colorWithRed:244/255.f green:117/255.f blue:117/255.f alpha:1.f];
+        set2.drawCircleHoleEnabled = NO;
+        
+        NSMutableArray *dataSets = [[NSMutableArray alloc] init];
+        [dataSets addObject:set1];
+        [dataSets addObject:set2];
+        
+        LineChartData *data = [[LineChartData alloc] initWithDataSets:dataSets];
+        [data setValueTextColor:UIColor.whiteColor];
+        [data setValueFont:[UIFont systemFontOfSize:9.f]];
+        
+        _chartView.data = data;
+    }
 }
 
 - (void)optionTapped:(NSString *)key
 {
-    if ([key isEqualToString:@"toggleValues"])
-    {
-        for (ChartDataSet *set in _chartView.data.dataSets)
-        {
-            set.drawValuesEnabled = !set.isDrawValuesEnabled;
-        }
-        
-        [_chartView setNeedsDisplay];
-    }
-    
     if ([key isEqualToString:@"toggleFilled"])
     {
-        for (LineChartDataSet *set in _chartView.data.dataSets)
+        for (id<ILineChartDataSet> set in _chartView.data.dataSets)
         {
             set.drawFilledEnabled = !set.isDrawFilledEnabled;
         }
         
         [_chartView setNeedsDisplay];
+        return;
     }
     
     if ([key isEqualToString:@"toggleCircles"])
     {
-        for (LineChartDataSet *set in _chartView.data.dataSets)
+        for (id<ILineChartDataSet> set in _chartView.data.dataSets)
         {
             set.drawCirclesEnabled = !set.isDrawCirclesEnabled;
         }
         
         [_chartView setNeedsDisplay];
+        return;
     }
     
     if ([key isEqualToString:@"toggleCubic"])
     {
-        for (LineChartDataSet *set in _chartView.data.dataSets)
+        for (id<ILineChartDataSet> set in _chartView.data.dataSets)
         {
             set.drawCubicEnabled = !set.isDrawCubicEnabled;
         }
         
         [_chartView setNeedsDisplay];
+        return;
     }
-    
-    if ([key isEqualToString:@"toggleHighlight"])
+
+    if ([key isEqualToString:@"toggleStepped"])
     {
-        _chartView.data.highlightEnabled = !_chartView.data.isHighlightEnabled;
+        for (id<ILineChartDataSet> set in _chartView.data.dataSets)
+        {
+            set.drawSteppedEnabled = !set.isDrawSteppedEnabled;
+        }
+
         [_chartView setNeedsDisplay];
     }
     
-    if ([key isEqualToString:@"toggleStartZero"])
+    if ([key isEqualToString:@"toggleHorizontalCubic"])
     {
-        _chartView.leftAxis.startAtZeroEnabled = !_chartView.leftAxis.isStartAtZeroEnabled;
-        _chartView.rightAxis.startAtZeroEnabled = !_chartView.rightAxis.isStartAtZeroEnabled;
-        
-        [_chartView notifyDataSetChanged];
-    }
-    
-    if ([key isEqualToString:@"animateX"])
-    {
-        [_chartView animateWithXAxisDuration:3.0];
-    }
-    
-    if ([key isEqualToString:@"animateY"])
-    {
-        [_chartView animateWithYAxisDuration:3.0];
-    }
-    
-    if ([key isEqualToString:@"animateXY"])
-    {
-        [_chartView animateWithXAxisDuration:3.0 yAxisDuration:3.0];
-    }
-    
-    if ([key isEqualToString:@"saveToGallery"])
-    {
-        [_chartView saveToCameraRoll];
-    }
-    
-    if ([key isEqualToString:@"togglePinchZoom"])
-    {
-        _chartView.pinchZoomEnabled = !_chartView.isPinchZoomEnabled;
+        for (id<ILineChartDataSet> set in _chartView.data.dataSets)
+        {
+            set.mode = set.mode == LineChartModeCubicBezier ? LineChartModeHorizontalBezier : LineChartModeCubicBezier;
+        }
         
         [_chartView setNeedsDisplay];
+        return;
     }
     
-    if ([key isEqualToString:@"toggleAutoScaleMinMax"])
-    {
-        _chartView.autoScaleMinMaxEnabled = !_chartView.isAutoScaleMinMaxEnabled;
-        [_chartView notifyDataSetChanged];
-    }
+    [super handleOption:key forChartView:_chartView];
 }
 
 #pragma mark - Actions
 
 - (IBAction)slidersValueChanged:(id)sender
 {
-    _sliderTextX.text = [@((int)_sliderX.value + 1) stringValue];
+    _sliderTextX.text = [@((int)_sliderX.value) stringValue];
     _sliderTextY.text = [@((int)_sliderY.value) stringValue];
     
-    [self setDataCount:(_sliderX.value + 1) range:_sliderY.value];
+    [self updateChartData];
 }
 
 #pragma mark - ChartViewDelegate
 
-- (void)chartValueSelected:(ChartViewBase * __nonnull)chartView entry:(ChartDataEntry * __nonnull)entry dataSetIndex:(NSInteger)dataSetIndex highlight:(ChartHighlight * __nonnull)highlight
+- (void)chartValueSelected:(ChartViewBase * __nonnull)chartView entry:(ChartDataEntry * __nonnull)entry highlight:(ChartHighlight * __nonnull)highlight
 {
     NSLog(@"chartValueSelected");
+    
+    [_chartView centerViewToAnimatedWithXValue:entry.x yValue:entry.y axis:[_chartView.data getDataSetByIndex:highlight.dataSetIndex].axisDependency duration:1.0];
+    //[_chartView moveViewToAnimatedWithXValue:entry.x yValue:entry.y axis:[_chartView.data getDataSetByIndex:dataSetIndex].axisDependency duration:1.0];
+    //[_chartView zoomAndCenterViewAnimatedWithScaleX:1.8 scaleY:1.8 xValue:entry.x yValue:entry.y axis:[_chartView.data getDataSetByIndex:dataSetIndex].axisDependency duration:1.0];
+
 }
 
 - (void)chartValueNothingSelected:(ChartViewBase * __nonnull)chartView

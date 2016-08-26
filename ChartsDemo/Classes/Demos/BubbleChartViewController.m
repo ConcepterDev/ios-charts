@@ -6,7 +6,7 @@
 //    Copyright 2015 Pierre-Marc Airoldi
 //    Licensed under Apache License 2.0
 //
-//  https://github.com/danielgindi/ios-charts
+//  https://github.com/danielgindi/Charts
 //
 
 #import "BubbleChartViewController.h"
@@ -33,13 +33,13 @@
     self.options = @[
                      @{@"key": @"toggleValues", @"label": @"Toggle Values"},
                      @{@"key": @"toggleHighlight", @"label": @"Toggle Highlight"},
-                     @{@"key": @"toggleStartZero", @"label": @"Toggle StartZero"},
                      @{@"key": @"animateX", @"label": @"Animate X"},
                      @{@"key": @"animateY", @"label": @"Animate Y"},
                      @{@"key": @"animateXY", @"label": @"Animate XY"},
                      @{@"key": @"saveToGallery", @"label": @"Save to Camera Roll"},
                      @{@"key": @"togglePinchZoom", @"label": @"Toggle PinchZoom"},
                      @{@"key": @"toggleAutoScaleMinMax", @"label": @"Toggle auto scale min/max"},
+                     @{@"key": @"toggleData", @"label": @"Toggle Data"},
                      ];
     
     _chartView.delegate = self;
@@ -50,10 +50,8 @@
     _chartView.drawGridBackgroundEnabled = NO;
     _chartView.dragEnabled = YES;
     [_chartView setScaleEnabled:YES];
-    _chartView.maxVisibleValueCount = 200;
+    _chartView.maxVisibleCount = 200;
     _chartView.pinchZoomEnabled = YES;
-    _chartView.leftAxis.startAtZeroEnabled = NO;
-    _chartView.rightAxis.startAtZeroEnabled = NO;
     
     ChartLegend *l = _chartView.legend;
     l.position = ChartLegendPositionRightOfChart;
@@ -62,8 +60,8 @@
     ChartYAxis *yl = _chartView.leftAxis;
     yl.labelFont = [UIFont fontWithName:@"HelveticaNeue-Light" size:10.f];
     yl.spaceTop = 0.3;
-    yl.startAtZeroEnabled = NO;
     yl.spaceBottom = 0.3;
+    yl.axisMinimum = 0.0; // this replaces startAtZero = YES
 
     _chartView.rightAxis.enabled = NO;
     
@@ -71,7 +69,7 @@
     xl.labelPosition = XAxisLabelPositionBottom;
     xl.labelFont = [UIFont fontWithName:@"HelveticaNeue-Light" size:10.f];
     
-    _sliderX.value = 5.0;
+    _sliderX.value = 10.0;
     _sliderY.value = 50.0;
     [self slidersValueChanged:nil];
 }
@@ -82,15 +80,19 @@
     // Dispose of any resources that can be recreated.
 }
 
-- (void)setDataCount:(int)count range:(double)range
+- (void)updateChartData
 {
-    NSMutableArray *xVals = [[NSMutableArray alloc] init];
-    
-    for (int i = 0; i < count; i++)
+    if (self.shouldHideData)
     {
-        [xVals addObject:[@(i) stringValue]];
+        _chartView.data = nil;
+        return;
     }
     
+    [self setDataCount:_sliderX.value range:_sliderY.value];
+}
+
+- (void)setDataCount:(int)count range:(double)range
+{
     NSMutableArray *yVals1 = [[NSMutableArray alloc] init];
     NSMutableArray *yVals2 = [[NSMutableArray alloc] init];
     NSMutableArray *yVals3 = [[NSMutableArray alloc] init];
@@ -99,24 +101,24 @@
     {
         double val = (double) (arc4random_uniform(range));
         double size = (double) (arc4random_uniform(range));
-        [yVals1 addObject:[[BubbleChartDataEntry alloc] initWithXIndex:i value:val size:size]];
+        [yVals1 addObject:[[BubbleChartDataEntry alloc] initWithX:i y:val size:size]];
         
         val = (double) (arc4random_uniform(range));
         size = (double) (arc4random_uniform(range));
-        [yVals2 addObject:[[BubbleChartDataEntry alloc] initWithXIndex:i value:val size:size]];
+        [yVals2 addObject:[[BubbleChartDataEntry alloc] initWithX:i y:val size:size]];
         
         val = (double) (arc4random_uniform(range));
         size = (double) (arc4random_uniform(range));
-        [yVals3 addObject:[[BubbleChartDataEntry alloc] initWithXIndex:i value:val size:size]];
+        [yVals3 addObject:[[BubbleChartDataEntry alloc] initWithX:i y:val size:size]];
     }
     
-    BubbleChartDataSet *set1 = [[BubbleChartDataSet alloc] initWithYVals:yVals1 label:@"DS 1"];
+    BubbleChartDataSet *set1 = [[BubbleChartDataSet alloc] initWithValues:yVals1 label:@"DS 1"];
     [set1 setColor:ChartColorTemplates.colorful[0] alpha:0.50f];
     [set1 setDrawValuesEnabled:YES];
-    BubbleChartDataSet *set2 = [[BubbleChartDataSet alloc] initWithYVals:yVals2 label:@"DS 2"];
+    BubbleChartDataSet *set2 = [[BubbleChartDataSet alloc] initWithValues:yVals2 label:@"DS 2"];
     [set2 setColor:ChartColorTemplates.colorful[1] alpha:0.50f];
     [set2 setDrawValuesEnabled:YES];
-    BubbleChartDataSet *set3 = [[BubbleChartDataSet alloc] initWithYVals:yVals3 label:@"DS 3"];
+    BubbleChartDataSet *set3 = [[BubbleChartDataSet alloc] initWithValues:yVals3 label:@"DS 3"];
     [set3 setColor:ChartColorTemplates.colorful[2] alpha:0.50f];
     [set3 setDrawValuesEnabled:YES];
     
@@ -125,7 +127,8 @@
     [dataSets addObject:set2];
     [dataSets addObject:set3];
     
-    BubbleChartData *data = [[BubbleChartData alloc] initWithXVals:xVals dataSets:dataSets];
+    BubbleChartData *data = [[BubbleChartData alloc] initWithDataSets:dataSets];
+    [data setDrawValues:NO];
     [data setValueFont:[UIFont fontWithName:@"HelveticaNeue-Light" size:7.f]];
     [data setHighlightCircleWidth: 1.5];
     [data setValueTextColor:UIColor.whiteColor];
@@ -135,102 +138,17 @@
 
 - (void)optionTapped:(NSString *)key
 {
-    if ([key isEqualToString:@"toggleValues"])
-    {
-        for (ChartDataSet *set in _chartView.data.dataSets)
-        {
-            set.drawValuesEnabled = !set.isDrawValuesEnabled;
-        }
-        
-        [_chartView setNeedsDisplay];
-    }
-    
-    if ([key isEqualToString:@"toggleFilled"])
-    {
-        for (LineChartDataSet *set in _chartView.data.dataSets)
-        {
-            set.drawFilledEnabled = !set.isDrawFilledEnabled;
-        }
-        
-        [_chartView setNeedsDisplay];
-    }
-    
-    if ([key isEqualToString:@"toggleCircles"])
-    {
-        for (LineChartDataSet *set in _chartView.data.dataSets)
-        {
-            set.drawCirclesEnabled = !set.isDrawCirclesEnabled;
-        }
-        
-        [_chartView setNeedsDisplay];
-    }
-    
-    if ([key isEqualToString:@"toggleCubic"])
-    {
-        for (LineChartDataSet *set in _chartView.data.dataSets)
-        {
-            set.drawCubicEnabled = !set.isDrawCubicEnabled;
-        }
-        
-        [_chartView setNeedsDisplay];
-    }
-    
-    if ([key isEqualToString:@"toggleHighlight"])
-    {
-        _chartView.data.highlightEnabled = !_chartView.data.isHighlightEnabled;
-        [_chartView setNeedsDisplay];
-    }
-    
-    if ([key isEqualToString:@"toggleStartZero"])
-    {
-        _chartView.leftAxis.startAtZeroEnabled = !_chartView.leftAxis.isStartAtZeroEnabled;
-        _chartView.rightAxis.startAtZeroEnabled = !_chartView.rightAxis.isStartAtZeroEnabled;
-        
-        [_chartView notifyDataSetChanged];
-    }
-    
-    if ([key isEqualToString:@"animateX"])
-    {
-        [_chartView animateWithXAxisDuration:3.0];
-    }
-    
-    if ([key isEqualToString:@"animateY"])
-    {
-        [_chartView animateWithYAxisDuration:3.0];
-    }
-    
-    if ([key isEqualToString:@"animateXY"])
-    {
-        [_chartView animateWithXAxisDuration:3.0 yAxisDuration:3.0];
-    }
-    
-    if ([key isEqualToString:@"saveToGallery"])
-    {
-        [_chartView saveToCameraRoll];
-    }
-    
-    if ([key isEqualToString:@"togglePinchZoom"])
-    {
-        _chartView.pinchZoomEnabled = !_chartView.isPinchZoomEnabled;
-        
-        [_chartView setNeedsDisplay];
-    }
-    
-    if ([key isEqualToString:@"toggleAutoScaleMinMax"])
-    {
-        _chartView.autoScaleMinMaxEnabled = !_chartView.isAutoScaleMinMaxEnabled;
-        [_chartView notifyDataSetChanged];
-    }
+    [super handleOption:key forChartView:_chartView];
 }
 
 #pragma mark - Actions
 
 - (IBAction)slidersValueChanged:(id)sender
 {
-    _sliderTextX.text = [@((int)_sliderX.value + 1) stringValue];
+    _sliderTextX.text = [@((int)_sliderX.value) stringValue];
     _sliderTextY.text = [@((int)_sliderY.value) stringValue];
     
-    [self setDataCount:(_sliderX.value + 1) range:_sliderY.value];
+    [self updateChartData];
 }
 
 #pragma mark - ChartViewDelegate
