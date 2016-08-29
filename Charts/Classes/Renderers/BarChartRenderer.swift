@@ -118,10 +118,18 @@ public class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                     bottom *= CGFloat(phaseY)
                 }
                 
-                barRect.origin.x = left
-                barRect.size.width = right - left
+                if left <=у  0 {
+                    barRect.origin.x = 0
+                }
+                else
+                {
+                    barRect.origin.x = abs(left * 0.8)
+                }
+                barRect.size.width = (right - left) * 0.9
                 barRect.origin.y = top
                 barRect.size.height = bottom - top
+                
+                print(barRect)
                 
                 buffer.rects[bufferIndex] = barRect
                 bufferIndex += 1
@@ -165,7 +173,7 @@ public class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                     bottom *= CGFloat(phaseY)
                     
                     barRect.origin.x = left
-                    barRect.size.width = right - left
+                    barRect.size.width = (right - left)
                     barRect.origin.y = top
                     barRect.size.height = bottom - top
                     
@@ -399,7 +407,8 @@ public class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                     {
                         guard let e = dataSet.entryForIndex(j) as? BarChartDataEntry else { continue }
                         
-                        let rect = buffer.rects[j]
+                        var rect = buffer.rects[j]
+//                        rect.size.width = 12
                         
                         let x = rect.origin.x + rect.size.width / 2.0
                         
@@ -415,7 +424,7 @@ public class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                         }
                         
                         let val = e.y
-                        
+
                         drawValue(
                             context: context,
                             value: formatter.stringForValue(
