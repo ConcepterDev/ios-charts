@@ -118,7 +118,7 @@ public class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                     bottom *= CGFloat(phaseY)
                 }
                 
-                if left <=у  0 {
+                if left <= 0 {
                     barRect.origin.x = 0
                 }
                 else
@@ -222,6 +222,8 @@ public class BarChartRenderer: BarLineScatterCandleBubbleRenderer
         let borderColor = dataSet.barBorderColor
         let drawBorder = borderWidth > 0.0
         
+        
+        
         CGContextSaveGState(context)
         
         // draw the bar shadow before the values
@@ -284,7 +286,6 @@ public class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                     break
                 }
                 
-                CGContextSetFillColorWithColor(context, dataSet.barShadowColor.CGColor)
                 CGContextFillRect(context, barRect)
             }
         }
@@ -316,7 +317,12 @@ public class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                 CGContextSetFillColorWithColor(context, dataSet.colorAt(j).CGColor)
             }
             
-            CGContextFillRect(context, barRect)
+            let bezierPath = UIBezierPath(roundedRect: barRect, cornerRadius: 4)
+            CGContextAddPath(context, bezierPath.CGPath);
+            UIColor.whiteColor().setFill()
+            
+            CGContextDrawPath(context, CGPathDrawingMode.Fill);
+            
             
             if drawBorder
             {
