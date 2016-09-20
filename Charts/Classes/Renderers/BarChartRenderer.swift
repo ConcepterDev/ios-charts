@@ -118,7 +118,7 @@ public class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                     bottom *= CGFloat(phaseY)
                 }
                 
-                barRect.origin.x = left
+                barRect.origin.x = abs(left * 0.8)
                 barRect.size.width = right - left
                 barRect.origin.y = top
                 barRect.size.height = bottom - top
@@ -450,7 +450,7 @@ public class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                         
                         let rect = buffer.rects[bufferIndex]
                         
-                        let x = rect.origin.x + rect.size.width / 2.0
+                        let x = (rect.origin.x + rect.size.width / 2.0) * 0.7
                         
                         // we still draw stacked bars, but there is one non-stacked in between
                         if vals == nil
