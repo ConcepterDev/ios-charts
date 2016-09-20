@@ -308,7 +308,11 @@ public class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                 CGContextSetFillColorWithColor(context, dataSet.colorAt(j).CGColor)
             }
             
-            CGContextFillRect(context, barRect)
+            let bezierPath = UIBezierPath(roundedRect: barRect, cornerRadius: (barRect.width / 2.0))
+            CGContextAddPath(context, bezierPath.CGPath);
+            
+            
+            CGContextDrawPath(context, CGPathDrawingMode.Fill);
             
             if drawBorder
             {
@@ -613,7 +617,12 @@ public class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                 
                 setHighlightDrawPos(highlight: high, barRect: barRect)
                 
-                CGContextFillRect(context, barRect)
+                let bezierPath = UIBezierPath(roundedRect: barRect, cornerRadius: (barRect.width / 2.0))
+                CGContextAddPath(context, bezierPath.CGPath);
+                
+                
+                CGContextDrawPath(context, CGPathDrawingMode.Fill);
+            
             }
         }
         
