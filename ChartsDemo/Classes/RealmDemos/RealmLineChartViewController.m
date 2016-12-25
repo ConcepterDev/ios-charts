@@ -49,6 +49,9 @@
     
     [self setupBarLineChartView:_chartView];
     
+    // enable description text
+    _chartView.chartDescription.enabled = YES;
+    
     _chartView.leftAxis.axisMaximum = 150.f;
     _chartView.leftAxis.axisMinimum = 0.f;
     _chartView.leftAxis.drawGridLinesEnabled = NO;
@@ -72,7 +75,6 @@
     
     RealmLineDataSet *set = [[RealmLineDataSet alloc] initWithResults:results xValueField:@"xValue" yValueField:@"yValue"];
     
-    set.drawCubicEnabled = NO;
     set.label = @"Realm LineDataSet";
     set.drawCircleHoleEnabled = NO;
     set.color = [ChartColorTemplates colorFromString:@"#FF5722"];
@@ -119,7 +121,7 @@
     {
         for (id<ILineChartDataSet> set in _chartView.data.dataSets)
         {
-            set.drawCubicEnabled = !set.isDrawCubicEnabled;
+            set.mode = set.mode == LineChartModeCubicBezier ? LineChartModeLinear : LineChartModeCubicBezier;
         }
         
         [_chartView setNeedsDisplay];

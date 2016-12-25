@@ -49,8 +49,7 @@
     
     _chartView.delegate = self;
     
-    _chartView.descriptionText = @"";
-    _chartView.noDataTextDescription = @"You need to provide data for the chart.";
+    _chartView.chartDescription.enabled = NO;
     
     _chartView.dragEnabled = YES;
     [_chartView setScaleEnabled:YES];
@@ -59,10 +58,14 @@
     
     _chartView.backgroundColor = [UIColor colorWithWhite:204/255.f alpha:1.f];
     
-    _chartView.legend.form = ChartLegendFormLine;
-    _chartView.legend.font = [UIFont fontWithName:@"HelveticaNeue-Light" size:11.f];
-    _chartView.legend.textColor = UIColor.whiteColor;
-    _chartView.legend.position = ChartLegendPositionBelowChartLeft;
+    ChartLegend *l = _chartView.legend;
+    l.form = ChartLegendFormLine;
+    l.font = [UIFont fontWithName:@"HelveticaNeue-Light" size:11.f];
+    l.textColor = UIColor.whiteColor;
+    l.horizontalAlignment = ChartLegendHorizontalAlignmentLeft;
+    l.verticalAlignment = ChartLegendVerticalAlignmentBottom;
+    l.orientation = ChartLegendOrientationHorizontal;
+    l.drawInside = NO;
     
     ChartXAxis *xAxis = _chartView.xAxis;
     xAxis.labelFont = [UIFont systemFontOfSize:11.f];
@@ -112,6 +115,8 @@
 - (void)setDataCount:(int)count range:(double)range
 {
     NSMutableArray *yVals1 = [[NSMutableArray alloc] init];
+    NSMutableArray *yVals2 = [[NSMutableArray alloc] init];
+    NSMutableArray *yVals3 = [[NSMutableArray alloc] init];
     
     for (int i = 0; i < count; i++)
     {
@@ -120,23 +125,30 @@
         [yVals1 addObject:[[ChartDataEntry alloc] initWithX:i y:val]];
     }
     
-    NSMutableArray *yVals2 = [[NSMutableArray alloc] init];
-    
-    for (int i = 0; i < count; i++)
+    for (int i = 0; i < count - 1; i++)
     {
         double mult = range;
         double val = (double) (arc4random_uniform(mult)) + 450;
         [yVals2 addObject:[[ChartDataEntry alloc] initWithX:i y:val]];
     }
     
-    LineChartDataSet *set1 = nil, *set2 = nil;
+    for (int i = 0; i < count; i++)
+    {
+        double mult = range;
+        double val = (double) (arc4random_uniform(mult)) + 500;
+        [yVals3 addObject:[[ChartDataEntry alloc] initWithX:i y:val]];
+    }
+    
+    LineChartDataSet *set1 = nil, *set2 = nil, *set3 = nil;
     
     if (_chartView.data.dataSetCount > 0)
     {
         set1 = (LineChartDataSet *)_chartView.data.dataSets[0];
         set2 = (LineChartDataSet *)_chartView.data.dataSets[1];
+        set3 = (LineChartDataSet *)_chartView.data.dataSets[2];
         set1.values = yVals1;
         set2.values = yVals2;
+        set3.values = yVals3;
         [_chartView.data notifyDataChanged];
         [_chartView notifyDataSetChanged];
     }
@@ -164,9 +176,21 @@
         set2.highlightColor = [UIColor colorWithRed:244/255.f green:117/255.f blue:117/255.f alpha:1.f];
         set2.drawCircleHoleEnabled = NO;
         
+        set3 = [[LineChartDataSet alloc] initWithValues:yVals3 label:@"DataSet 3"];
+        set3.axisDependency = AxisDependencyRight;
+        [set3 setColor:UIColor.yellowColor];
+        [set3 setCircleColor:UIColor.whiteColor];
+        set3.lineWidth = 2.0;
+        set3.circleRadius = 3.0;
+        set3.fillAlpha = 65/255.0;
+        set3.fillColor = [UIColor.yellowColor colorWithAlphaComponent:200/255.f];
+        set3.highlightColor = [UIColor colorWithRed:244/255.f green:117/255.f blue:117/255.f alpha:1.f];
+        set3.drawCircleHoleEnabled = NO;
+        
         NSMutableArray *dataSets = [[NSMutableArray alloc] init];
         [dataSets addObject:set1];
         [dataSets addObject:set2];
+        [dataSets addObject:set3];
         
         LineChartData *data = [[LineChartData alloc] initWithDataSets:dataSets];
         [data setValueTextColor:UIColor.whiteColor];
@@ -204,7 +228,7 @@
     {
         for (id<ILineChartDataSet> set in _chartView.data.dataSets)
         {
-            set.drawCubicEnabled = !set.isDrawCubicEnabled;
+            set.mode = set.mode == LineChartModeCubicBezier ? LineChartModeLinear : LineChartModeCubicBezier;
         }
         
         [_chartView setNeedsDisplay];

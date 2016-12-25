@@ -49,8 +49,7 @@
     chart.delegate = self;
     chart.backgroundColor = color;
     
-    chart.descriptionText = @"";
-    chart.noDataTextDescription = @"You need to provide data for the chart.";
+    chart.chartDescription.enabled = NO;
     
     chart.drawGridBackgroundEnabled = NO;
     chart.dragEnabled = YES;
@@ -61,8 +60,8 @@
     chart.legend.enabled = NO;
     
     chart.leftAxis.enabled = NO;
-    chart.leftAxis.spaceTop = 40.0;
-    chart.leftAxis.spaceBottom = 40.0;
+    chart.leftAxis.spaceTop = 0.4;
+    chart.leftAxis.spaceBottom = 0.4;
     chart.rightAxis.enabled = NO;
     chart.xAxis.enabled = NO;
     

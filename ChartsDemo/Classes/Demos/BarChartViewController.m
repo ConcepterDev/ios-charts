@@ -84,11 +84,15 @@
     rightAxis.spaceTop = 0.15;
     rightAxis.axisMinimum = 0.0; // this replaces startAtZero = YES
     
-    _chartView.legend.position = ChartLegendPositionBelowChartLeft;
-    _chartView.legend.form = ChartLegendFormSquare;
-    _chartView.legend.formSize = 9.0;
-    _chartView.legend.font = [UIFont fontWithName:@"HelveticaNeue-Light" size:11.f];
-    _chartView.legend.xEntrySpace = 4.0;
+    ChartLegend *l = _chartView.legend;
+    l.horizontalAlignment = ChartLegendHorizontalAlignmentLeft;
+    l.verticalAlignment = ChartLegendVerticalAlignmentBottom;
+    l.orientation = ChartLegendOrientationHorizontal;
+    l.drawInside = NO;
+    l.form = ChartLegendFormSquare;
+    l.formSize = 9.0;
+    l.font = [UIFont fontWithName:@"HelveticaNeue-Light" size:11.f];
+    l.xEntrySpace = 4.0;
     
     XYMarkerView *marker = [[XYMarkerView alloc]
                                   initWithColor: [UIColor colorWithWhite:180/255. alpha:1.0]
@@ -124,10 +128,7 @@
 
 - (void)setDataCount:(int)count range:(double)range
 {
-    double start = 0.0;
-    
-    _chartView.xAxis.axisMinimum = start;
-    _chartView.xAxis.axisMaximum = start + count + 2;
+    double start = 1.0;
     
     NSMutableArray *yVals = [[NSMutableArray alloc] init];
     
@@ -135,7 +136,7 @@
     {
         double mult = (range + 1);
         double val = (double) (arc4random_uniform(mult));
-        [yVals addObject:[[BarChartDataEntry alloc] initWithX:(double)i + 1.0 y:val]];
+        [yVals addObject:[[BarChartDataEntry alloc] initWithX:(double)i y:val]];
     }
     
     BarChartDataSet *set1 = nil;
