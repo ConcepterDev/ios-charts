@@ -118,18 +118,10 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                     bottom *= CGFloat(phaseY)
                 }
                 
-                if left <= 0 {
-                    barRect.origin.x = 0
-                }
-                else
-                {
-                    barRect.origin.x = abs(left * 0.8)
-                }
-                barRect.size.width = (right - left) * 0.9
+                barRect.origin.x = left
+                barRect.size.width = right - left
                 barRect.origin.y = top
                 barRect.size.height = bottom - top
-                
-                print(barRect)
                 
                 buffer.rects[bufferIndex] = barRect
                 bufferIndex += 1
@@ -178,7 +170,7 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                     bottom *= CGFloat(phaseY)
                     
                     barRect.origin.x = left
-                    barRect.size.width = (right - left)
+                    barRect.size.width = right - left
                     barRect.origin.y = top
                     barRect.size.height = bottom - top
                     
@@ -324,17 +316,7 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                 context.setFillColor(dataSet.color(atIndex: j).cgColor)
             }
             
-//<<<<<<< HEAD:Charts/Classes/Renderers/BarChartRenderer.swift
-            #if os(iOS)
-            let bezierPath = UIBezierPath(roundedRect: barRect, cornerRadius: 4)
-            context.addPath(bezierPath.cgPath)
-            NSUIColor.white.setFill()
-            
-            context.drawPath(using: CGPathDrawingMode.fill);
-            #endif
-//=======
             context.fill(barRect)
-//>>>>>>> 3fe38177b3e351f6b2ebc177aea803996914c7f2:Source/Charts/Renderers/BarChartRenderer.swift
             
             if drawBorder
             {
@@ -417,6 +399,8 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                 let trans = dataProvider.getTransformer(forAxis: dataSet.axisDependency)
                 
                 let phaseY = animator.phaseY
+                
+                let iconsOffset = dataSet.iconsOffset
         
                 // if only single values are drawn (sum)
                 if !dataSet.isStacked
@@ -426,7 +410,6 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                         guard let e = dataSet.entryForIndex(j) as? BarChartDataEntry else { continue }
                         
                         let rect = buffer.rects[j]
-//                        rect.size.width = 12
                         
                         let x = rect.origin.x + rect.size.width / 2.0
                         
@@ -442,21 +425,42 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                         }
                         
                         let val = e.y
-
-                        drawValue(
-                            context: context,
-                            value: formatter.stringForValue(
-                                val,
-                                entry: e,
-                                dataSetIndex: dataSetIndex,
-                                viewPortHandler: viewPortHandler),
-                            xPos: x,
-                            yPos: val >= 0.0
+                        
+                        if dataSet.isDrawValuesEnabled
+                        {
+                            drawValue(
+                                context: context,
+                                value: formatter.stringForValue(
+                                    val,
+                                    entry: e,
+                                    dataSetIndex: dataSetIndex,
+                                    viewPortHandler: viewPortHandler),
+                                xPos: x,
+                                yPos: val >= 0.0
+                                    ? (rect.origin.y + posOffset)
+                                    : (rect.origin.y + rect.size.height + negOffset),
+                                font: valueFont,
+                                align: .center,
+                                color: dataSet.valueTextColorAt(j))
+                        }
+                        
+                        if let icon = e.icon, dataSet.isDrawIconsEnabled
+                        {
+                            var px = x
+                            var py = val >= 0.0
                                 ? (rect.origin.y + posOffset)
-                                : (rect.origin.y + rect.size.height + negOffset),
-                            font: valueFont,
-                            align: .center,
-                            color: dataSet.valueTextColorAt(j))
+                                : (rect.origin.y + rect.size.height + negOffset)
+                            
+                            px += iconsOffset.x
+                            py += iconsOffset.y
+                            
+                            ChartUtils.drawImage(
+                                context: context,
+                                image: icon,
+                                x: px,
+                                y: py,
+                                size: icon.size)
+                        }
                     }
                 }
                 else
@@ -489,19 +493,39 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                                 continue
                             }
                             
-                            drawValue(
-                                context: context,
-                                value: formatter.stringForValue(
-                                    e.y,
-                                    entry: e,
-                                    dataSetIndex: dataSetIndex,
-                                    viewPortHandler: viewPortHandler),
-                                xPos: x,
-                                yPos: rect.origin.y +
-                                    (e.y >= 0 ? posOffset : negOffset),
-                                font: valueFont,
-                                align: .center,
-                                color: dataSet.valueTextColorAt(index))
+                            if dataSet.isDrawValuesEnabled
+                            {
+                                drawValue(
+                                    context: context,
+                                    value: formatter.stringForValue(
+                                        e.y,
+                                        entry: e,
+                                        dataSetIndex: dataSetIndex,
+                                        viewPortHandler: viewPortHandler),
+                                    xPos: x,
+                                    yPos: rect.origin.y +
+                                        (e.y >= 0 ? posOffset : negOffset),
+                                    font: valueFont,
+                                    align: .center,
+                                    color: dataSet.valueTextColorAt(index))
+                            }
+                            
+                            if let icon = e.icon, dataSet.isDrawIconsEnabled
+                            {
+                                var px = x
+                                var py = rect.origin.y +
+                                    (e.y >= 0 ? posOffset : negOffset)
+                                
+                                px += iconsOffset.x
+                                py += iconsOffset.y
+                                
+                                ChartUtils.drawImage(
+                                    context: context,
+                                    image: icon,
+                                    x: px,
+                                    y: py,
+                                    size: icon.size)
+                            }
                         }
                         else
                         {
@@ -555,18 +579,31 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                                     continue
                                 }
                                 
-                                drawValue(
-                                    context: context,
-                                    value: formatter.stringForValue(
-                                        vals[k],
-                                        entry: e,
-                                        dataSetIndex: dataSetIndex,
-                                        viewPortHandler: viewPortHandler),
-                                    xPos: x,
-                                    yPos: y,
-                                    font: valueFont,
-                                    align: .center,
-                                    color: dataSet.valueTextColorAt(index))
+                                if dataSet.isDrawValuesEnabled
+                                {
+                                    drawValue(
+                                        context: context,
+                                        value: formatter.stringForValue(
+                                            vals[k],
+                                            entry: e,
+                                            dataSetIndex: dataSetIndex,
+                                            viewPortHandler: viewPortHandler),
+                                        xPos: x,
+                                        yPos: y,
+                                        font: valueFont,
+                                        align: .center,
+                                        color: dataSet.valueTextColorAt(index))
+                                }
+                                
+                                if let icon = e.icon, dataSet.isDrawIconsEnabled
+                                {
+                                    ChartUtils.drawImage(
+                                        context: context,
+                                        image: icon,
+                                        x: x + iconsOffset.x,
+                                        y: y + iconsOffset.y,
+                                        size: icon.size)
+                                }
                             }
                         }
                         
